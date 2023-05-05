@@ -4,7 +4,7 @@ import json
 import subprocess
 import mimetypes
 import shutil
-from zipfile import ZipFile
+import tarfile
 from typing import List
 from argparse import Namespace
 import time
@@ -303,13 +303,13 @@ class Predictor(BasePredictor):
 
         results = []
 
-        weights_path = "output.zip"
+        weights_path = "output.tar"
 
         directory = Path(cog_output_dir)
-        with ZipFile(weights_path, "w") as zip:
+        with tarfile.open(weights_path, "w") as tar:
             for file_path in directory.rglob("*"):
                 print(file_path)
-                zip.write(file_path, arcname=file_path.relative_to(directory))
+                tar.add(file_path, arcname=file_path.relative_to(directory))
 
         results.append(Path(weights_path))
 
