@@ -4,6 +4,7 @@ import json
 import subprocess
 import mimetypes
 import shutil
+from zipfile import ZipFile
 import tarfile
 from typing import List
 from argparse import Namespace
