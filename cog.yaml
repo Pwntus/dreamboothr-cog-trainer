@@ -1,0 +1,23 @@
+build:
+  gpu: true
+  cuda: "11.6"
+  python_version: "3.10"
+  python_packages:
+    - "diffusers==0.15.1"
+    - "torch==2.0.0"
+    - "torchvision==0.15.1"
+    - "timm==0.6.12"
+    - "ftfy==6.1.1"
+    - "scipy==1.9.3"
+    - "transformers==4.27.1"
+    - "accelerate==0.18.0"
+    - "bitsandbytes==0.35.4"
+    - "xformers"
+  system_packages:
+    - ffmpeg
+    - libsm6
+    - libxext6
+  run:
+    - "mkdir /gc && cd /gc && curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-426.0.0-linux-x86_64.tar.gz && tar -xf google-cloud-cli-426.0.0-linux-x86_64.tar.gz && ./google-cloud-sdk/install.sh -q"
+
+predict: "predict.py:Predictor"
