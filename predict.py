@@ -4,6 +4,7 @@ import json
 import subprocess
 import mimetypes
 import shutil
+import uuid
 from zipfile import ZipFile
 import tarfile
 from typing import List
@@ -40,8 +41,22 @@ class Predictor(BasePredictor):
         url = f"https://storage.googleapis.com/<bucket>/{weights}.tar"
 
         dest = self.weights_path(weights)
-        output = subprocess.check_output(
+        subprocess.check_output(
             ['/src/pgettar', url, dest, str(16)])
+
+    def upload_weights(self, file_id: str, path: str):
+        print(f"Uploading weights for {file_id}...")
+
+        dest = f"gs://<bucket>/finetune/{file_id}.tar"
+        try:
+            my_env = os.environ.copy()
+            my_env["CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE"] = "/src/credentials.json"
+            subprocess.check_call(
+                ["/gc/google-cloud-sdk/bin/gcloud", "storage", "cp", path, dest], env=my_env
+            )
+        except subprocess.CalledProcessError as exc:
+            result = exc.output
+            print(result)
 
     def predict(
         self,
@@ -178,8 +193,11 @@ class Predictor(BasePredictor):
             description='json of samples to generate: [{"name": "sample_name", "input": {"prompt": "a sks dog", "num_samples": 4, "save_guidance_scale": 7.5, "save_infer_steps": 50}}]',
             default=None
         ),
+        upload: bool = Input(
+            description="Upload weights", default=True
+        ),
         info: bool = Input(
-            description="log extra information about the run", default=False
+            description="Log extra information about the run", default=False
         ),
     ) -> List[Path]:
 
@@ -304,7 +322,8 @@ class Predictor(BasePredictor):
 
         results = []
 
-        weights_path = "output.tar"
+        file_id = uuid.uuid4().hex
+        weights_path = f"{file_id}.tar"
 
         directory = Path(cog_output_dir)
         with tarfile.open(weights_path, "w") as tar:
@@ -312,7 +331,13 @@ class Predictor(BasePredictor):
                 print(file_path)
                 tar.add(file_path, arcname=file_path.relative_to(directory))
 
-        results.append(Path(weights_path))
+        if upload:
+            start = time.time()
+            self.upload_weights(file_id, weights_path)
+            print("uploading weights took: %0.2f" % (time.time() - start))
+            results.append(weights_path)
+        else:
+            results.append(Path(weights_path))
 
         directory = Path(cog_generated_images)
         for file_path in directory.rglob("*"):
